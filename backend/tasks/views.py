@@ -1,24 +1,23 @@
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-
+import json
+from django.http import JsonResponse
 from .models import Task
-from .serializers import TaskSerializer
 
-
-@api_view(['GET', 'POST'])
 def task_list(request):
 
-    if request.method == 'GET':
-        tasks = Task.objects.all()
-        serializer = TaskSerializer(tasks, many=True)
-        return Response(serializer.data)
+    if request.method == "GET":
+        tasks = list(Task.objects.values())
+        return JsonResponse(tasks, safe=False)
 
-    elif request.method == 'POST':
-        serializer = TaskSerializer(data=request.data)
+    if request.method == "POST":
+        data = json.loads(request.body)
 
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        task = Task.objects.create(
+            title=data.get("title"),
+            is_completed=data.get("is_completed", False)
+        )
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return JsonResponse({
+            "id": task.id,
+            "title": task.title,
+            "is_completed": task.is_completed
+        })
