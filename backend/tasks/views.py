@@ -1,7 +1,9 @@
 import json
 from django.http import JsonResponse
 from .models import Task
+from django.views.decorators.csrf import csrf_exempt
 
+@csrf_exempt
 def task_list(request):
 
     if request.method == "GET":
@@ -9,15 +11,22 @@ def task_list(request):
         return JsonResponse(tasks, safe=False)
 
     if request.method == "POST":
-        data = json.loads(request.body)
+        try:
+            data = json.loads(request.body.decode("utf-8"))
 
-        task = Task.objects.create(
-            title=data.get("title"),
-            is_completed=data.get("is_completed", False)
-        )
+            if "title" not in data:
+                return JsonResponse({"error": "title is required"}, status=400)
 
-        return JsonResponse({
-            "id": task.id,
-            "title": task.title,
-            "is_completed": task.is_completed
-        })
+            task = Task.objects.create(
+                title=data["title"],
+                is_completed=data.get("is_completed", False)
+            )
+
+            return JsonResponse({
+                "id": task.id,
+                "title": task.title,
+                "is_completed": task.is_completed
+            })
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
